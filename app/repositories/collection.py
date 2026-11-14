@@ -16,3 +16,6 @@ class CollectionRepository:
     async def get_all(self) -> list[CollectionORM]:
         query = select(CollectionORM).order_by(CollectionORM.created_at)
         return (await self.db.scalars(query)).all()
+
+    async def get_by_id(self, collection_id: str) -> CollectionORM | None:
+        return await self.db.get(CollectionORM, collection_id)
