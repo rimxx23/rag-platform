@@ -38,7 +38,7 @@ services:
     command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
     ports:
       - "8000:8000"
-    volumes: &uploads
+    volumes:
       - uploads:/app/uploads
     depends_on: &depends
       db:
@@ -50,12 +50,17 @@ services:
   worker:
     build: .
     env_file: .env
-    environment: *docker_env
+    environment:
+      <<: *docker_env
+      FASTEMBED_CACHE_PATH: /app/models
     command: celery -A app.worker.celery_app worker --loglevel=info
-    volumes: *uploads
+    volumes:
+      - uploads:/app/uploads
+      - models:/app/models
     depends_on: *depends
     restart: unless-stopped
 
 volumes:
   postgres_data:
   uploads:
+  models:
