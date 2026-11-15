@@ -6,6 +6,7 @@ from app.repositories.document import DocumentRepository
 from app.schemas.document import DocumentSchema
 from app.services.exceptions import FileTooLargeError, InvalidFileError
 from app.services.storage import save_upload
+from app.worker.tasks import process_document
 
 router = APIRouter(prefix="/collections/{collection_id}/documents", tags=["documents"])
 
@@ -37,6 +38,7 @@ async def upload_document(
         raise HTTPException(status.HTTP_413_REQUEST_ENTITY_TOO_LARGE, str(e)) from None
 
     await documents.db.commit()
+    process_document.delay(document.id)
     return DocumentSchema.model_validate(document)
 
 

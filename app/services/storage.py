@@ -18,11 +18,15 @@ def get_extension(filename: str | None) -> str:
     return extension
 
 
+def get_upload_path(document_id: str, extension: str) -> Path:
+    return get_settings().UPLOAD_DIR / f"{document_id}{extension}"
+
+
 async def save_upload(file: UploadFile, document_id: str) -> Path:
     settings = get_settings()
     extension = get_extension(file.filename)
     settings.UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    path = settings.UPLOAD_DIR / f"{document_id}{extension}"
+    path = get_upload_path(document_id, extension)
     decoder = codecs.getincrementaldecoder("utf-8")()
     size = 0
 

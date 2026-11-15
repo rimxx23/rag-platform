@@ -13,6 +13,9 @@ class DocumentRepository:
         self.db.add(document)
         return document
 
+    async def get_by_id(self, document_id: str) -> DocumentORM | None:
+        return await self.db.get(DocumentORM, document_id)
+
     async def get_by_collection(self, collection_id: str) -> list[DocumentORM]:
         query = select(DocumentORM).where(DocumentORM.collection_id == collection_id).order_by(DocumentORM.created_at)
         return (await self.db.scalars(query)).all()
