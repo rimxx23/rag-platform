@@ -3,7 +3,12 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.db.session import get_db
 from app.repositories.collection import CollectionRepository
+from app.repositories.document import DocumentRepository
 
 
 def get_collection_repository(db: AsyncSession = Depends(get_db)) -> CollectionRepository:
     return CollectionRepository(db)
+
+
+def get_document_repository(db: AsyncSession = Depends(get_db)) -> DocumentRepository:
+    return DocumentRepository(db)

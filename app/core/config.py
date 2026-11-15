@@ -1,4 +1,5 @@
 import functools
+from pathlib import Path
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -13,6 +14,9 @@ class Settings(BaseSettings):
     POSTGRES_PORT: int
 
     REDIS_URL: str
+
+    UPLOAD_DIR: Path = Path("uploads")
+    MAX_UPLOAD_SIZE: int = 20 * 1024 * 1024
 
     @property
     def DATABASE_URL(self) -> str:
