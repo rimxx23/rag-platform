@@ -1,8 +1,15 @@
+import re
+
 import httpx
 
 from app.core.config import get_settings
 
 NO_ANSWER = "В документах нет ответа на этот вопрос"
+CITATION_PATTERN = re.compile(r"\[(\d+)\]")
+
+
+class LLMUnavailableError(Exception):
+    pass
 
 SYSTEM_PROMPT = f"""Ты помощник, который отвечает на вопросы по документам компании.
 
@@ -32,7 +39,19 @@ async def generate_answer(question: str, fragments: list[str]) -> str:
             {"role": "user", "content": build_user_message(question, fragments)},
         ],
     }
-    async with httpx.AsyncClient(timeout=60) as client:
-        response = await client.post(f"{settings.OLLAMA_URL}/api/chat", json=payload)
-        response.raise_for_status()
+    try:
+        async with httpx.AsyncClient(timeout=60) as client:
+            response = await client.post(f"{settings.OLLAMA_URL}/api/chat", json=payload)
+            response.raise_for_status()
+    except httpx.HTTPError as e:
+        raise LLMUnavailableError("LLM is unavailable") from e
     return response.json()["message"]["content"].strip()
+
+
+def extract_citations(answer: str, count: int) -> list[int]:
+    result = []
+    for match in CITATION_PATTERN.findall(answer):
+        number = int(match)
+        if 1 <= number <= count and number not in result:
+            result.append(number)
+    return result
