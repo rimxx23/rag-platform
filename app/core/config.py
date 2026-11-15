@@ -18,6 +18,9 @@ class Settings(BaseSettings):
     UPLOAD_DIR: Path = Path("uploads")
     MAX_UPLOAD_SIZE: int = 20 * 1024 * 1024
 
+    OLLAMA_URL: str = "http://localhost:11434"
+    LLM_MODEL: str = "qwen2.5:3b"
+
     @property
     def DATABASE_URL(self) -> str:
         return (
