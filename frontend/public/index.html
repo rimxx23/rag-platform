@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#0b0b12">
+  <title>RAG Platform</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script type="module" src="/static/app.js"></script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span>RAG Platform</a>
+    <div id="account" hidden><span id="username"></span><button id="logout" type="button" class="secondary">Выйти</button></div>
+  </header>
+  <main>
+    <section id="auth" class="auth-shell" aria-labelledby="auth-title">
+      <div class="auth-intro">
+        <div class="auth-orbit" aria-hidden="true"></div>
+        <h2>Чат по документам</h2>
+        <p>Загружайте файлы и задавайте вопросы. Ответы сопровождаются цитатами из источников.</p>
+      </div>
+      <div class="auth-card">
+        <h1 id="auth-title">Вход</h1>
+        <form id="auth-form">
+          <label>Имя пользователя <input id="login-name" name="username" autocomplete="username" required minlength="3" maxlength="64" pattern="[a-zA-Z0-9_.\-]+"></label>
+          <label>Пароль <input id="password" name="password" type="password" autocomplete="current-password" required minlength="8" maxlength="128"></label>
+          <button id="auth-submit">Войти</button>
+        </form>
+        <button id="auth-toggle" class="link" type="button">Создать аккаунт</button>
+      </div>
+    </section>
+    <p id="notice" role="status" aria-live="polite" hidden></p>
+    <div id="workspace" class="workspace" hidden>
+      <aside class="sidebar" aria-label="Коллекции и документы">
+        <h2>Коллекции</h2>
+        <form id="collection-form" class="inline">
+          <input name="name" placeholder="Название коллекции" aria-label="Название коллекции" required>
+          <button aria-label="Добавить коллекцию" title="Добавить коллекцию">+</button>
+        </form>
+        <ul id="collections" class="collections"></ul>
+        <section id="documents-panel" hidden>
+          <h2>Документы</h2>
+          <form id="upload-form">
+            <label class="file-label">PDF или Markdown <input name="file" type="file" accept=".pdf,.md,.markdown" required></label>
+            <button class="secondary">Загрузить</button>
+          </form>
+          <ul id="documents" class="documents"></ul>
+        </section>
+      </aside>
+      <section class="chat" aria-labelledby="chat-title">
+        <h1 id="chat-title">Выберите коллекцию</h1>
+        <p id="empty" class="muted">Создайте коллекцию или откройте существующую.</p>
+        <button id="older" class="secondary" hidden>Показать более ранние вопросы</button>
+        <ol id="history" class="history" aria-live="polite"></ol>
+        <form id="ask-form" hidden>
+          <label for="question">Вопрос по документам</label>
+          <div class="inline">
+            <textarea id="question" name="question" placeholder="Что вы хотите узнать?" rows="2" maxlength="1000" required></textarea>
+            <button>Спросить</button>
+          </div>
+        </form>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

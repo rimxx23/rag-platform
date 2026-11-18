@@ -13,6 +13,7 @@ Runs fully locally: embeddings and the LLM work on your machine, documents never
 
 ```bash
 curl -X POST localhost:8000/collections/{collection_id}/ask \
+  -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"question": "Сколько дней отпуска?"}'
 ```
@@ -61,6 +62,8 @@ A question that the documents cannot answer:
 - pytest
 - Docker, Docker Compose
 
+The web chat was built with AI assistance.
+
 ## How it works
 
 ```mermaid
@@ -98,11 +101,28 @@ flowchart LR
 
 | Method | Path | Description | Response |
 |--------|------|-------------|----------|
+| `POST` | `/auth/register` | Register with a JSON username and password | `201`, `409`, `422` |
+| `POST` | `/auth/login` | Exchange form credentials for a JWT | `200`, `401` |
+| `GET` | `/auth/me` | Get the authenticated user | `200`, `401` |
 | `POST` | `/collections` | Create a collection | `201` |
 | `GET` | `/collections` | List collections | `200` |
 | `POST` | `/collections/{id}/documents` | Upload a PDF or Markdown file | `202`, `400`, `404`, `413` |
 | `GET` | `/collections/{id}/documents` | List documents with their status | `200`, `404` |
 | `POST` | `/collections/{id}/ask` | Ask a question, get an answer with citations | `200`, `404`, `422`, `503` |
+| `GET` | `/collections/{id}/history` | Read saved questions, answers and citations, newest first | `200`, `404` |
+
+History accepts `limit` (1–100, default 20) and `offset` (default 0). Successful
+`/ask` responses, including answers with no supporting sources, are saved. Requests
+that fail before an answer is returned are excluded.
+
+All collection endpoints require `Authorization: Bearer <token>`. Invalid or missing
+credentials return `401`. A collection belonging to another account returns `404`.
+Collections created before authentication retain their files and data with no owner
+and are hidden from the API until an administrator assigns an owner in the database.
+
+Ask and upload are limited per user. Sign-in and registration are limited per
+client IP. The defaults are 5, 3, 10, and 5 requests per 60 seconds, respectively.
+A limited request returns `429` with `Retry-After` in seconds.
 
 Interactive docs: http://localhost:8000/docs
 
@@ -118,7 +138,10 @@ Interactive docs: http://localhost:8000/docs
 
    ```bash
    cp .env.example .env
+   python -c 'import secrets; print(secrets.token_urlsafe(48))'
    ```
+
+   Set `JWT_SECRET_KEY` in `.env` to the generated value.
 
 3. Start everything:
 
@@ -126,11 +149,15 @@ Interactive docs: http://localhost:8000/docs
    docker compose up --build -d
    ```
 
-   This starts four containers: `db`, `redis`, `api` and `worker`.
+   This starts five containers: `frontend`, `api`, `worker`, `db` and `redis`.
+   Caddy serves the web chat and forwards API requests to FastAPI on the Docker network.
    Migrations are applied automatically when the API starts.
    The embedding model (~240 MB) is downloaded on first use and cached in a Docker volume.
 
-4. Open http://localhost:8000/docs, create a collection, upload a document and ask a question.
+4. Open http://localhost:8000, register and sign in. Create a collection, upload a
+   document, wait until it is ready and ask a question. The chat displays saved
+   answers and lets you expand their source excerpts. Swagger remains available at
+   http://localhost:8000/docs.
 
 Useful commands:
 
@@ -139,12 +166,20 @@ docker compose logs worker -f   # follow the worker logs
 docker compose stop             # stop everything (data is kept)
 ```
 
+## Testing with your own document
+
+After registering through the web chat, create a test collection from an existing
+Markdown file with `python scripts/seed_demo.py USERNAME path/to/document.md`.
+Run `python scripts/load_ask.py COLLECTION_ID --question "Your question"` to check
+the request limit on that collection.
+
 ## Running tests
 
 ```bash
 python -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt
+pip install -r backend/requirements.txt
+cd backend
 pytest -v
 ```
 
@@ -152,27 +187,37 @@ pytest -v
 
 ```text
 rag-platform/
-├── app/
-│   ├── api/            # routers and dependencies
-│   ├── core/           # settings
-│   ├── db/             # database session
-│   ├── models/         # SQLAlchemy models: collections, documents, chunks
-│   ├── repositories/   # database queries, vector search
-│   ├── schemas/        # Pydantic schemas
-│   ├── services/       # storage, extractor, chunker, embedder, LLM client, ask
-│   └── worker/         # Celery app and document processing task
-├── alembic/            # database migrations
-├── docs/design.md      # design doc
-├── tests/              # pytest tests
-├── docker-compose.yml
-├── Dockerfile
-└── requirements.txt
+├── backend/
+│   ├── app/            # API, services, repositories, models and Celery worker
+│   ├── alembic/        # database migrations
+│   ├── evals/          # RAG quality checks
+│   ├── tests/          # pytest tests
+│   ├── Dockerfile
+│   └── requirements.txt
+├── frontend/
+│   ├── public/         # HTML, CSS, UI code and API client
+│   └── Caddyfile       # static server and reverse proxy
+├── docs/
+├── scripts/            # demo setup and load check
+└── docker-compose.yml
 ```
+
+## Quality evaluation
+
+With Ollama running and the configured model installed, run
+`python -m evals.run_evals` from `backend/`. The runner compares retrieval
+hit rates across chunk sizes and evaluates answers with the backend's default
+chunking and retrieval limit.
+
+Answer scores use normalized reference phrases and optional variants from
+`backend/evals/questions.json`. A citation passes when every numeric reference is in range
+and at least one cited fragment contains the reference evidence. These string checks
+can miss paraphrases and do not establish whether every claim is supported.
 
 ## Roadmap
 
 - Evaluation set and metrics: retrieval hit rate, faithfulness, latency
 - Distance threshold for search results, HNSW index for large collections
-- JWT auth and a web chat frontend
-- Claude API as an alternative LLM (only `app/services/llm.py` needs to change)
+- Host the public demo
+- Claude API as an alternative LLM (only `backend/app/services/llm.py` needs to change)
 - More formats: Word, HTML, web pages

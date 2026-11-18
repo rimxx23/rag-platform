@@ -1,0 +1,26 @@
+{
+    auto_https off
+    servers {
+        trusted_proxies static {$TRUSTED_EDGE_PROXY:127.0.0.1}
+        trusted_proxies_strict
+    }
+}
+
+:8080 {
+    root * /srv
+
+    handle_path /static/* {
+        file_server
+    }
+
+    @index path /
+    handle @index {
+        file_server
+    }
+
+    handle {
+        reverse_proxy api:8000 {
+            header_up X-Forwarded-For {client_ip}
+        }
+    }
+}
